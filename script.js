@@ -33,15 +33,15 @@ const bikeTrailEntrancesGeoJson = {
 // END OF DATA
 
 // declaration of leaflet map
-let map = L.map('map').setView([43.725, -79.370], 12);
+let map = L.map("map").setView([43.725, -79.370], 12);
 
-const streetsLayer = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+const streetsLayer = L.tileLayer("https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
     maxZoom: 18,
-    id: 'mapbox/streets-v11',
+    id: "mapbox/streets-v11",
     tileSize: 512,
     zoomOffset: -1,
-    accessToken: 'pk.eyJ1Ijoic2FyamVhbnRkZXYiLCJhIjoiY2tsOW15a3U0MmhhczJvcWpxMTRsYTVuMyJ9.dr_XfAVVy5u13hAK-giBKQ'
+    accessToken: "pk.eyJ1Ijoic2FyamVhbnRkZXYiLCJhIjoiY2tsOW15a3U0MmhhczJvcWpxMTRsYTVuMyJ9.dr_XfAVVy5u13hAK-giBKQ"
 }).addTo(map);
 
 
@@ -54,15 +54,33 @@ const trailHeadMarker = {
     fillOpacity: 0.8
 };
 
-const parkingIcon = L.icon({
-    iconUrl: './images/parking-marker.png',
-    iconSize: [50, 50],
-    iconAnchor: [20, 45], 
-    popupAnchor: [7, -35],
+const parkingIcon = L.Icon.extend({
+    options: {
+        iconSize: [35, 35],
+        iconAnchor: [20, 45],
+        popupAnchor: [0, -40],
+    }
 });
 
+const MapTitle = L.Control.extend({
+    options: {
+        position: "topright"
+    },
+    onAdd: (map) => {
+        return L.DomUtil.create('div', 'mapTitle')
+    },
+    setContent: function(content) { 
+        this.getContainer().innerHTML =  content
+    }
+})
+
+const mapTitle = new MapTitle().addTo(map)
+mapTitle.setContent('<p>Toronto Bike Trail & Parking Map</p>')
+
+
+
 // API Endpoint used to geocode address to get an accurate gps coord of bike racks
-const geocodingEnpoint = 'https://app.geocodeapi.io/api/v1/search?apikey=f188b200-72fd-11eb-b87f-0bad01c40e3b&text=';
+const geocodingEnpoint = "https://app.geocodeapi.io/api/v1/search?apikey=f188b200-72fd-11eb-b87f-0bad01c40e3b&text=";
 
 // OUTDOOR PARKING LAYER cluster group to show 
 const outdoorParking = L.markerClusterGroup().addLayer(L.geoJSON(bikeParkingOutdoorGeoJson, {
@@ -72,12 +90,13 @@ const outdoorParking = L.markerClusterGroup().addLayer(L.geoJSON(bikeParkingOutd
         let featureLat = layer.feature.geometry.coordinates[0]
         let googleStreetViewUrl = `http://maps.google.com/maps?q=&layer=c&cbll=${featureLong},${featureLat}&cbp=11,0,0,0,0`
 
-        layer.setIcon(parkingIcon)
+        layer.setIcon(new parkingIcon({ iconUrl: "./assets/images/parking-marker.png"}))
+
         .bindPopup(`
-            <h3>${feature.properties.address}</h3>
+            <h3>Outdoor Parking: ${feature.properties.address}</h3>
             <p ><a class="googleLink" href=${googleStreetViewUrl} target="_blank">View it on Google Street View!</p>
         `)
-        .on('mouseup', () => { 
+        .on("mouseup", () => { 
             map.flyTo([featureLong, featureLat], 18)
             
             fetch(`${geocodingEnpoint}${feature.properties.address}`)
@@ -86,7 +105,7 @@ const outdoorParking = L.markerClusterGroup().addLayer(L.geoJSON(bikeParkingOutd
                     let featureLong = data.features[0].geometry.coordinates[1];
                     let featureLat = data.features[0].geometry.coordinates[0];
                     let googleStreetViewUrl = `http://maps.google.com/maps?q=&layer=c&cbll=${featureLong},${featureLat}&cbp=11,0,0,0,0`
-                    const googleLink = document.querySelector('.googleLink');
+                    const googleLink = document.querySelector(".googleLink");
                     if (googleLink) {
                         googleLink.href = googleStreetViewUrl
                     }
@@ -101,15 +120,19 @@ const outdoorParking = L.markerClusterGroup().addLayer(L.geoJSON(bikeParkingOutd
 // INDOOR PARKING LAYER - parking spots indoors (only two)
 const indoorParking = L.geoJSON(bikeParkingIndoorGeoJson, {
     onEachFeature: (feature, layer) => {
-        layer.setIcon(parkingIcon)
-        .on('mouseup', () => {
+        const indoorParkingIcon = new parkingIcon({ iconUrl: "./assets/images/indoor-parking.png", iconSize: [40,50]})
+        layer.setIcon(indoorParkingIcon)
+        //layer.setIcon(iconUrl: "./assets/images/indoor-parking.png"})
+       //layer.iconUrl("./assets/images/indoor-parking.png")
+        .on("mouseup", () => {
             let featureLong = layer.feature.geometry.coordinates[1];
             let featureLat = layer.feature.geometry.coordinates[0]
             map.flyTo([featureLong, featureLat], 17)
         })
     }
 }).bindPopup(layer => {
-    return layer.feature.properties.ttc_stop;
+    return `<h3>Paid Secure Indoor Parking: ${layer.feature.properties.ttc_stop}</h3>
+            <a href="https://www.toronto.ca/services-payments/streets-parking-transportation/cycling-in-toronto/bicycle-parking/bicycle-parking-stations/" target="_blank">Location & Rates</a>`;
 }).addTo(map);
 
 
@@ -117,21 +140,21 @@ const indoorParking = L.geoJSON(bikeParkingIndoorGeoJson, {
 const bikeNetwork = L.geoJSON(bikeNetworkGeoJson, {
     style: feature => {
         switch (feature.properties.type) {
-            case 'Multi-Use Trail': return {color: "#111111"};
-            case 'Connector Trail': return { color: "#333333" };
-            case 'Local Minor Trails': return { color: "#444444" };
+            case "Multi-Use Trail": return {color: "#111111"};
+            case "Connector Trail": return { color: "#333333" };
+            case "Local Minor Trails": return { color: "#444444" };
         }
     }
 }).bindPopup(layer => {
-    return `<h3>Trail Name: ${layer.feature.properties.name.replace('Trl', 'Trail')}</h3>
+    return `<h3>Trail Name: ${layer.feature.properties.name.replace("Trl", "Trail")}</h3>
             <p>Length: ${layer.feature.properties.length}m</p>
             <p>Surface: ${layer.feature.properties.surface}</p>
             <p>Type: ${layer.feature.properties.type}</p>`
 }).eachLayer(layer => {
-    layer.addEventListener('mouseup', function() {
-        map.flyToBounds(layer.getBounds(), { 'duration': 1 })
+    layer.addEventListener("mouseup", function() {
+        map.flyToBounds(layer.getBounds(), { "duration": 1 })
         bikeNetwork.setStyle({ color: "#111111" })
-        this.setStyle({ color: 'red' })
+        this.setStyle({ color: "red" })
     })
 }).addTo(map);
 
@@ -155,18 +178,19 @@ const data = {
 L.control.layers(null, data).addTo(map)
 L.control.scale().addTo(map);
 
+
 const searchControl = new L.Control.Search({
     layer: bikeNetwork,
-    propertyName: 'name',
+    propertyName: "name",
     marker:false,
     moveToLocation: (latlng, title, map) => {
-        map.flyToBounds(latlng.layer.getBounds(), { 'duration': 1 })
+        map.flyToBounds(latlng.layer.getBounds(), { "duration": 1 })
     }
     
 })
 
-searchControl.on('search:locationfound', e => {
-    e.layer.setStyle({fillColor: '#3f0', color: 'red'});
+searchControl.on("search:locationfound", e => {
+    e.layer.setStyle({fillColor: "#3f0", color: "red"});
    	//restore feature color
     if (bikeNetwork.openPopup(e.layer)) {
         bikeNetwork.openPopup(e.layer);
@@ -174,7 +198,7 @@ searchControl.on('search:locationfound', e => {
         
   
 
-}).on('search:collapsed', () => {
+}).on("search:collapsed", () => {
     bikeNetwork.eachLayer(layer => {	//restore feature color
         bikeNetwork.resetStyle(layer);
     });	
@@ -184,8 +208,41 @@ map.addControl( searchControl );  //inizialize search control
 
 L.control.locate().addTo(map);
 
-bikeNetwork.getPopup().on('remove', () => {
+bikeNetwork.getPopup().on("remove", () => {
     bikeNetwork.eachLayer(layer => {	//restore feature color
         bikeNetwork.resetStyle(layer);
     });	
 })
+
+
+L.control.Legend({
+    position: "bottomright",
+    legends: [
+        {
+            label: "Trail Entrance",
+            type: "circle",
+            radius: 4,
+            fillColor: "#ff7800",
+            color: "#000",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+        },
+        {
+            label: "Bike Trail",
+            type: "polyline",
+            stroke: true,
+            color: '#111111'
+        },
+        {
+            label: "Outdoor Parking",
+            type: "image",
+            url: "./assets/images/parking-marker.png",
+        },
+        {
+            label: "Indoor Parking",
+            type: "image",
+            url: "./assets/images/indoor-parking.png",
+        }
+    ]
+}).addTo(map);

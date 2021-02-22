@@ -5,3 +5,23 @@ body {
     height: 100vh;
     width: 100vw;
 }
+
+.leaflet-control-container .mapTitle  { 
+    color: white;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 20px;
+    line-height: 18px;
+    width: 300px;
+    text-align: center;
+    padding: 10px 35px;
+}
+
+@media (max-width: 500px) {
+    .leaflet-control-container .mapTitle {
+        font-size: 13px;
+        width: 175px;
+        padding: 5px 20px;
+    }
+    
+}
