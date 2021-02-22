@@ -175,7 +175,7 @@ const data = {
     "Indoor Parking": indoorParking
 }
 
-L.control.layers(null, data).addTo(map)
+L.control.layers(null, data, {position: 'topleft'}).addTo(map)
 L.control.scale().addTo(map);
 
 
