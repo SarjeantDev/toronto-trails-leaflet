@@ -17,15 +17,20 @@ body {
     padding: 10px 35px;
 }
 
-.leaflet-bottom { 
-    bottom: 20px
-}
+
 
 @media (max-width: 500px) {
     .leaflet-control-container .mapTitle {
         font-size: 13px;
         width: 175px;
         padding: 5px 20px;
+    }
+
+    .leaflet-bottom { 
+        bottom: 50px
+    }
+        .leaflet-left {
+        bottom: 80px;
     }
     
 }
